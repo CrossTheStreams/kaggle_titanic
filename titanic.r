@@ -26,12 +26,6 @@ with.age <- train[which(is.na(train$Age)),]
 with.age[which(with.age$Age < 14),"Name"]     
 # A higher Fare would probably indicate an older person?
 
-train$Ticket
-
-cor(train$Fare,train$Survived)
-
-train$Pclass
-
 # Based on analysis so far...
 
 # Features with good signal without any adjustment seem to be sex, fares, first class, third class, b.cabin

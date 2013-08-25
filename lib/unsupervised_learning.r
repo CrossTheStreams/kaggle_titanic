@@ -1,3 +1,4 @@
+
 # Try to get at mutual information between target and logical variablesz
 mut.info <- function(data, columns) { 
 
@@ -36,41 +37,40 @@ plot.signal <- function(signal) {
 
 }
 
-plot.kmeans <- function (data,variables) {
-
-  data <- scale(data[,variables])
-
-  wss <- (nrow(train.selected)-1)*sum(apply(train.selected,2,var))
+within.groups.ss <- function (data) {
+  wss <- (nrow(data)-1)*sum(apply(data,2,var))
   for (i in 2:15) { 
-    wss[i] <- sum(kmeans(train.selected, centers=i)$withinss)
+    wss[i] <- sum(kmeans(data, centers=i)$withinss)
   }
 
   plot(1:15, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
-
-  fit <- kmeans(train.selected,7)
-
-  clusplot(train.selected, fit$cluster, color=TRUE, shade=TRUE, labels=2, lines=0)
-
-  plotcluster(train.selected, fit$cluster)
 }
 
+titanic.kmeans <- function (data,variables,n.clusters) {
 
-assign.cluster.variables <- function ( ) {
-
-  for (x in 1:7) {
-    train.selected[,paste("c",as.character(x),sep="")] <- F
+  for (x in 1:n.clusters) {
+    data[,paste("c",as.character(x),sep="")] <- F
   }
+
+  # Base kmeans clustering on selected attributes only
+  data <- scale(data[,variables])
+
+  fit <- kmeans(data,n.clusters)
+
+  clusplot(data, fit$cluster, color=TRUE, shade=TRUE, labels=2, lines=0)
+
+  plotcluster(data, fit$cluster)
 
   # clustering for the lulz
   # storing these categories in the training data in case it comes in handy...
 
-  for (x in 1:nrow(train.selected)) {
+  for (x in 1:nrow(data)) {
     mean.errors <- apply(X=fit$centers, MARGIN=1, FUN=function(r){
-      abs(sum(train.selected[x,] - r))
+      abs(sum(data[x,] - r))
     }) 
     cluster.idx <- as.integer(which(mean.errors == min(mean.errors)))
-    train.selected[x,paste("c",cluster.idx,sep="")] <- T
+    data[x,paste("c",cluster.idx,sep="")] <- T
   }
 
+  return(data)
 }
-
