@@ -24,20 +24,7 @@ signal <- signal.metrics(train[sample(1:nrow(train),size=200),],columns)
 
 plot.signal(signal)
 
-# Need to impute age in order to take advantage of the variable...
-with.age <- train[which(!is.na(train$Age)),]
-# Miss/Master indicates a child
-with.age[which(with.age$Age < 14),"Name"]     
-# A higher Fare would probably indicate an older person?
-
-
-# Based on analysis so far...
-
-# Features with good signal without any adjustment seem to be sex, fares, first class, third class, b.cabin
-
 variables <- c("female","Fare", "first.class","third.class","Young","Fare1","Fare2","Fare3","Fare4")
-
-cluster.variables <- c("c1","c2","c3","c4","c5","c6","c7")
 
 train <- titanic.kmeans(train,variables,7)
 prepped.test <- titanic.kmeans(prepped.test,variables,7)
@@ -90,7 +77,10 @@ test.survival.model <- function (test.model,variables,test.data,model.type="svm"
             paste("titanic_submission_",format(Sys.time(), "%m_%d_%y_%X.csv"),sep=""), 
             row.names=F)
 }
+
+# SVM
 test.survival.model(model,variables,prepped.test)
 
+# Random Forest
 test.survival.model(model,variables,prepped.test,model.type="random.forest")
 
