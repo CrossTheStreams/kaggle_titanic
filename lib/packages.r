@@ -21,4 +21,4 @@ pkgTest('cluster')
 
 pkgTest('fpc')
 
-
+pkgTest('randomForest')
