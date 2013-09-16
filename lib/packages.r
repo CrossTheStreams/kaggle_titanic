@@ -22,3 +22,5 @@ pkgTest('cluster')
 pkgTest('fpc')
 
 pkgTest('randomForest')
+
+pkgTest('caret')

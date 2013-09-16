@@ -46,7 +46,9 @@ prep.data <- function(data, training=T) {
      fare <- data[i,"Fare"]
      if (!is.na(fare)){
        fare.q <- sum(fare.quantiles < fare)
-       data[i,paste("Fare",fare.q,sep="")] <- T 
+       if (fare.q != 0) {
+         data[i,paste("Fare",fare.q,sep="")] <- T  
+       }
      }
   } 
 

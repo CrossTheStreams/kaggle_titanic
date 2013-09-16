@@ -8,79 +8,52 @@ test <- read.csv('data/test.csv')
 source('lib/packages.r')
 source('lib/unsupervised_learning.r')
 source('lib/data_prep.r')
+source('lib/models.r')
 
+# This is creating a lot of categorical features for us to use.
 train <- prep.data(train)
 prepped.test <- prep.data(test,training=F)
  
-boxplot(main="Fare Distributions, Died and Survived",train$Survived,train$Fare,outline=T)
+# Distribution of Fare among died and survived.
+boxplot(Fare ~ Survived, data=train, main="Fare Distributions, Died and Survived")
 boxplot(train[which(train$Survived == T),"Fare"])
+# Some correlation here.
 cor(train$Fare,train$Survived)
 
+# What looks promising among all categorical variables.
 columns <- names(train)[-which(names(train) %in% c("PassengerId","Name","Pclass","Cabin","Age","SibSp", "Survived","Parch", "Embarked", "Sex", "Ticket", "Fare"))]
-
-columns <- c("Fare1","Fare2","Fare3","Fare4")
-
 signal <- signal.metrics(train[sample(1:nrow(train),size=200),],columns)
-
 plot.signal(signal)
 
 variables <- c("female","Fare", "first.class","third.class","Young","Fare1","Fare2","Fare3","Fare4")
 
-train <- titanic.kmeans(train,variables,7)
-prepped.test <- titanic.kmeans(prepped.test,variables,7)
+# Used this for assigning features created from kmeans clusters
+# train <- titanic.kmeans(train,variables,7)
+# prepped.test <- titanic.kmeans(prepped.test,variables,7)
 
+train.samp <- train
+# train.samp <- train[sample(1:nrow(train),size=300),]
 
-titanic.svm.model <- function(data, variables) {
-
-  target <- data$Survived
-  model.train <- subset(data, select=c(variables,"Survived"))
-  model.train[,variables] <- scale(model.train[,variables])
-
-  model <- svm(Survived ~ female+Fare+first.class+third.class+Young+Fare1+Fare2+Fare3+Fare4, data=model.train)
-
-  prediction.data <- subset(model.train, select=variables)
-  pred <- predict(model, prediction.data)
-  tab <- table(pred=round(pred),true=as.factor(target))
-
-  return(list(model=model,conf.matrix=tab,performance=classAgreement(tab)))
-}
-
-titanic.random.forest <- function (data,variables) {
-
-  model.data <- subset(data, select=c(variables,"Survived"))
-  model.data[,variables] <- scale(model.data[,variables])
-  
-  fit <- randomForest(Survived ~ female + Fare + first.class + third.class + Young + Fare1 + Fare2 + Fare3+ Fare4,   data=model.data)
-
-}
-
-training.output <- titanic.svm.model(train,variables)
-
-rf.model <- titanic.random.forest(train,variables)
-
-pred <- sapply(training.output$predicted,function(x){return((x - 0.5) > 0)})
-
+# Training of SVM model
+training.output <- titanic.svm.model(train.samp,variables)
 svm.model <- training.output$model
+train.samp$svm.pred <- round(training.output$predictions)
 
-test.survival.model <- function (test.model,variables,test.data,model.type="svm") { 
+# Training of Random Forest
+rf.model <- titanic.random.forest(train.samp,variables)
+train.samp$rf.pred <- round(rf.model$predicted)
 
-  test.data.scaled <- scale(subset(test.data, select =c(variables)))
-  test.data.scaled[which(is.na(test.data.scaled[,2])),2] <- median(test.data.scaled[,2],na.rm=T)
-  if (model.type == "randomforest") {
-    test.pred <- sapply(predict(test.model, test.data.scaled),function(x){return((x - 0.5) > 0)})
-  }
-  else {
-    test.pred <- predict(test.model, test.data.scaled)  
-  }
 
-  write.csv(cbind(PassengerId=test$PassengerId,Survived=round(test.pred)),
-            paste("titanic_submission_",format(Sys.time(), "%m_%d_%y_%X.csv"),sep=""), 
-            row.names=F)
-}
+# Predict on test data with SVM model
+test.survival.model(svm.model,variables,prepped.test,model.type="svm")
+# Predict on test data with Random Forest
+test.survival.model(rf.model,variables,prepped.test,model.type="random.forest")
 
-# SVM
-test.survival.model(model,variables,prepped.test)
 
-# Random Forest
-test.survival.model(model,variables,prepped.test,model.type="random.forest")
+# Predict on training set and test data using ensemble of SVM and Random Forest
+ensemble.output <- titanic.ensemble(svm.model,rf.model,variables,prepped.test,train.samp)
 
+# Let's look at some performance indicators 
+confusionMatrix(data=train.samp$rf.pred,reference=train.samp$Survived)
+confusionMatrix(data=train.samp$svm.pred,reference=train.samp$Survived)
+confusionMatrix(data=ensemble.output$train.pred,reference=ensemble.output$train.survived)
